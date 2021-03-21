@@ -4,28 +4,115 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="3">.
+    <meta http-equiv="refresh" content="1">.
+    <script src="https://d3js.org/d3.v4.js"></script>
     <title>Trackerapp</title>
 </head>
-<body>
-    <p>App for tracker</p>
+<body style="background-color: rgb(214, 214, 214);">
+    <h1 style="text-align: center; font-size: 50px; font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;">HART Tracker Prototype</h1>
 
-    <div id="pie" style="width:49%; height:600px; border:1px solid #000; float: left">
-        Pie chart
+    <div id="pie" style="width:49%; height:800px; float: left;">
     </div>
 
-    <div id='floorplan' style="width:49%; height:600px; border:1px solid #000; float: right; 
-    background-image: url('floorplan.jpg'); background-position: center center; background-size: 700px; background-repeat: no-repeat;">
-        Floorplan
+    <script>
+        // set the dimensions and margins of the graph
+        var width = 800
+        height = 500
+        margin = 200
+
+        // The radius of the pieplot is half the width or half the height (smallest one). I subtract a bit of margin.
+        var radius = 230;
+
+        // append the svg object to the div called 'pie'
+        var svg = d3.select("#pie")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", "translate(" + 55 * width / 100 + "," + height / 2 + ")");
+
+        // Create dummy data
+        var data = {'G5 (ON)': "<%= t1on %>", 'G5 (OFF)': "<%= t1off %>", 'SERVO-I (ON)':"<%= t2on %>", 'SERVO-I (OFF)': "<%= t2off %>"};
+
+        // set the color scale
+        const color = d3.scaleOrdinal(['mediumblue', 'skyblue', 'crimson', 'lightcoral']);
+
+        // Compute the position of each group on the pie:
+        var pie = d3.pie()
+        .sort(null) // Do not sort group by size
+        .value(function(d) {return d.value; })
+        var data_ready = pie(d3.entries(data))
+
+        // The arc generator
+        var arc = d3.arc()
+        .innerRadius(0)         // This is the size of the donut hole
+        .outerRadius(radius * 0.8)
+
+        // Another arc that won't be drawn. Just for labels positioning
+        var outerArc = d3.arc()
+        .innerRadius(radius * 0.9)
+        .outerRadius(radius * 0.9)
+
+        // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function.
+        svg
+        .selectAll('allSlices')
+        .data(data_ready)
+        .enter()
+        .append('path')
+        .attr('d', arc)
+        .attr('fill', function(d){ return(color(d.data.key)) })
+        .attr("stroke", "white")
+        .style("stroke-width", "2px")
+        .style("opacity", 0.7)
+
+        // Add the polylines between chart and labels:
+        svg
+        .selectAll('allPolylines')
+        .data(data_ready)
+        .enter()
+        .append('polyline')
+        .attr("stroke", "black")
+        .style("fill", "none")
+        .attr("stroke-width", 1)
+        .attr('points', function(d) {
+        var posA = arc.centroid(d) // line insertion in the slice
+        var posB = outerArc.centroid(d) // line break: we use the other arc generator that has been built only for that
+        var posC = outerArc.centroid(d); // Label position = almost the same as posB
+        var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2 // we need the angle to see if the X position will be at the extreme right or extreme left
+        posC[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
+        return [posA, posB, posC]
+        })
+
+        // Add the polylines between chart and labels:
+        svg
+        .selectAll('allLabels')
+        .data(data_ready)
+        .enter()
+        .append('text')
+        .text( function(d) { console.log(d.data.key) ; return d.data.key + ": " + d.data.value } )
+        .attr('transform', function(d) {
+            var pos = outerArc.centroid(d);
+            var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+            pos[0] = radius * 0.99 * (midangle < Math.PI ? 1 : -1);
+            return 'translate(' + pos + ')';
+        })
+        .style('text-anchor', function(d) {
+            var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+            return (midangle < Math.PI ? 'start' : 'end')
+        })
+    </script>
+
+    <div id='floorplan' style="width:49%; height:600px; float: right; 
+    background-image: url('floorplan.png'); background-position: center center; background-size: 700px; background-repeat: no-repeat;">
 
         <span id="room1active" style = "height: 70px; width: 70px; background-color: rgb(90, 160, 90); border-radius: 50%; display: inline-block;
-         font-size: 55px; font-weight: bold; text-align: center; position: absolute; left: 64%; top: 30%">  <%= t1off %> </span>
+         font-size: 55px; font-weight: bold; text-align: center; position: absolute; left: 64%; top: 30%">  <%= room1off %> </span>
         <span class="room1inactive" style = "height: 70px; width: 70px; background-color: rgb(192, 65, 65); border-radius: 50%; display: inline-block;
-         font-size: 55px; font-weight: bold; text-align: center; position: absolute; left: 69%; top: 30%">  <%=t1on%> </span>
+         font-size: 55px; font-weight: bold; text-align: center; position: absolute; left: 69%; top: 30%">  <%=room1on%> </span>
         <span class="room2active" style = "height: 70px; width: 70px; background-color: rgb(90, 160, 90); border-radius: 50%; display: inline-block;
-         font-size: 55px; font-weight: bold; text-align: center; position: absolute; left: 78%; top: 30%">  <%=t2off%> </span>
+         font-size: 55px; font-weight: bold; text-align: center; position: absolute; left: 78%; top: 30%">  <%=room2off%> </span>
         <span class="room2inactive" style = "height: 70px; width: 70px; background-color: rgb(192, 65, 65); border-radius: 50%; display: inline-block;
-         font-size: 55px; font-weight: bold; text-align: center; position: absolute; left: 83%; top: 30%">  <%=t2on%> </span>
+         font-size: 55px; font-weight: bold; text-align: center; position: absolute; left: 83%; top: 30%">  <%=room2on%> </span>
     </div>
 
 </body>
